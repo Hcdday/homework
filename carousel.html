@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+	</head>
+	<style>
+	*{margin:0;padding:0}
+	ul li,ol{list-style:none}
+	a{text-decoration:none}
+	#container{
+		width: 850px;
+		height: 500px;
+		margin: 50px auto;
+		position: relative;
+		overflow: hidden;
+	}	
+	#container>ul{
+		width: 5100px;
+		height: 500px;
+		position: absolute;
+		left: 0;
+		top: 0;
+	}
+	#container>ul>li{
+		width:850px;
+		height:500px;
+		float:left;
+		z-index:0;
+		cursor: pointer;
+	}
+	#container>ol{
+		position: absolute;
+		right: 10px;
+		bottom: 10px;
+	}
+	#container ol>li{
+		width: 20px;
+		height: 20px;
+		float: left;
+		font-size: 12px;
+		line-height: 20px;
+		text-align: center;
+		margin-right: 10px;
+		background: white;
+		color: black;
+		cursor: pointer;
+		z-index:1;
+	}
+	#container ol>li.ac{
+		background: black;
+		color: white;
+	}
+	#container>span{
+		width: 50px;
+		height: 50px;
+		position: absolute;
+		top: 225px;
+		background: black;
+		color: white;
+		font-size: 21px;
+		line-height: 50px;
+		text-align: center;
+		cursor: pointer;
+		z-index:2;
+	}
+	#goPrev{left: 0;}
+	#goNext{right: 0;}
+	</style>
+	<body>
+		<div id="container">
+			<ul>
+				<li><a href=""><img src="images/1.jpg"/></a></li>
+				<li><a href=""><img src="images/2.jpg"/></a></li>
+				<li><a href=""><img src="images/3.jpg"/></a></li>
+				<li><a href=""><img src="images/4.jpg"/></a></li>
+				<li><a href=""><img src="images/5.jpg"/></a></li>
+			</ul>
+			<ol></ol>
+			<span id="goPrev"><</span>
+			<span id="goNext">></span>
+		</div>
+	</body>
+	<script type="text/javascript">
+	    //1.构造函数
+		function carousel(selector){
+			//找对象
+			this.selector=document.querySelector(selector);
+			this.ul=this.selector.querySelector("ul");
+			this.ol=this.selector.querySelector("ol");
+			this.imgs=this.ul.children;
+			this.btns=this.ol.children;
+			this.goPrev=document.querySelector("#goPrev");
+			this.goNext=document.querySelector("#goNext");
+			this.imgsIndex=0;//图片下标
+			this.btnsIndex=0;//btn按钮下标
+			this.btnsLastIndex=0;//btn按钮上一次的下标
+			
+		    this.ulAddLi();
+		    this.autoPlay();
+		}
+		//2.原型对象
+		carousel.prototype={
+			constructor : carousel,
+			//把ul的第一张图片克隆添加到尾部
+			ulAddLi : function (){
+				this.ul.appendChild(this.imgs[0].cloneNode(true));
+				this.olAddLi();
+			},
+			
+			//根据图片的length 添加对应的btn按钮 并给ol第一个li添加样式
+			olAddLi : function (){
+				for (let i=0;i<this.imgs.length-1;i++) {
+					var olLis=document.createElement("li");
+					olLis.innerHTML=i+1;
+					this.ol.appendChild(olLis);
+				}
+				this.btns[0].classList.add("ac");
+				this.bindEvents();
+			},
+			
+			//自动播放定时器
+            autoPlay : function (){
+            	//适用对象属性唯一性来创建此定时器 以便于清除 
+            	this.ul.timerB=setInterval(this.goNextClick.bind(this),2000);
+            },
+			
+			bindEvents : function (){
+				//给左绑定点击事件
+				this.goPrev.onclick=this.goPrevClick.bind(this);
+				//给右绑定点击事件
+				this.goNext.onclick=this.goNextClick.bind(this);
+				//给图片绑定mouseenter事件
+				this.ul.onmouseenter=this.ulOnmouseentter.bind(this);
+				//给图片绑定mouseleave事件
+				this.ul.onmouseleave=this.ulOnmouseleave.bind(this);
+				//给btns每一个btn绑定mouseenter丶mouseleave事件
+				Array.from(this.btns).forEach( function (btn,i){
+				    btn.onmouseenter=this.olOnmouseentter.bind(this,i);//注意  在bind里面可以传参数 i
+				    btn.onmouseleave=this.olOnmouseleave.bind(this);
+				}.bind(this));		
+			},
+			
+			ulOnmouseentter : function (){
+				clearInterval(this.ul.timerB);
+			},
+			
+			ulOnmouseleave : function (){
+				this.ul.timerB=setInterval(this.goNextClick.bind(this),2000);
+			},
+			
+			olOnmouseentter : function (i){
+				clearInterval(this.ul.timerB);
+				this.btnsIndex=i;
+				this.imgsIndex=i;
+				this.btnsChange();
+				let moveDistance=-i*this.imgs[0].offsetWidth;
+				this.linearMove(this.ul,moveDistance,700);
+			},
+			
+			olOnmouseleave : function (){
+				this.ul.timerB=setInterval(this.goNextClick.bind(this),2000);
+			},
+			
+			goPrevClick : function (){
+				this.imgsIndex--;
+				this.btnsIndex--;
+				clearInterval(this.ul.timerB);
+				//判断btn按钮
+				if(this.btnsIndex<0) this.btnsIndex=this.btns.length-1;
+				//图片移动 加判断
+				if(this.imgsIndex<0){//也就是-1的时候
+					this.btnsChange();
+					this.imgsIndex=this.imgs.length-2; //4
+					this.ul.style.left=-(this.imgsIndex+1)*this.imgs[0].offsetWidth+"px";
+					//从动态添加的那张图 向第五张 下标为4的那张图移动
+					let moveDistance=-this.imgsIndex*this.imgs[0].offsetWidth;
+					this.linearMove(this.ul,moveDistance,700);
+				}else{
+					this.btnsChange();
+					let moveDistance=-this.imgsIndex*this.imgs[0].offsetWidth;
+					this.linearMove(this.ul,moveDistance,700);
+				}
+				this.ul.timerB=setInterval(this.goNextClick.bind(this),2000);
+			},
+			
+			goNextClick : function (){
+				this.btnsIndex++;
+				this.imgsIndex++;
+				clearInterval(this.ul.timerB);//注意清除定时器
+				if(this.btnsIndex===this.btns.length) this.btnsIndex=0;
+				//判断 图片最后一张到 动态添加的那张后 再次点击  ul瞬间left:0 
+				if(this.imgsIndex===this.imgs.length){
+					this.btnsChange();
+					this.imgsIndex=1;
+					this.ul.style.left="0px";
+					//瞬间为0后 显示的是第一张也就是下标为0的那张图 这里是下标0-1的动画
+					let moveDistance=-this.imgsIndex*this.imgs[0].offsetWidth;
+					this.linearMove(this.ul,moveDistance,700);
+				}else{
+					this.btnsChange();
+					let moveDistance=-this.imgsIndex*this.imgs[0].offsetWidth;
+					this.linearMove(this.ul,moveDistance,700);
+				}
+				this.ul.timerB=setInterval(this.goNextClick.bind(this),2000);//完成点击后加上定时器
+			},
+			
+			btnsChange : function (){
+				//看着两个值的变化 加上box取消overflow hidden时 就一目了然
+				//console.log(this.btnsIndex);
+				//console.log(this.btnsLastIndex);
+				this.btns[this.btnsIndex].classList.add("ac");
+				this.btns[this.btnsLastIndex].classList.remove("ac");
+				this.btnsLastIndex=this.btnsIndex;
+			},
+			
+			//匀速动画  初始位置 终点  步数(时间/20ms) 每一步走的px也就是(终-初)/步数
+			linearMove : function (obj,end,time){
+				clearInterval(obj.timer);
+				let start=obj.offsetLeft;
+				let step=parseInt(time/20);
+				let everyStepPx=(end-start)/step;
+				obj.timer=setInterval(function (){
+					start+=everyStepPx;
+					obj.style.left=start+"px";
+					if(Math.abs(end-start)<Math.abs(everyStepPx)){
+						clearInterval(obj.timer);
+						obj.style.left=end+"px";
+					}
+				},20)	
+			}
+		}
+		//3.new一个实例
+		new carousel("#container");
+	</script>
+</html>
